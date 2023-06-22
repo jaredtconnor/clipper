@@ -1,0 +1,299 @@
+Core classes, functions, and methods:
+- User model: represents a user in the system
+- Auth model: represents an authentication token for a user
+- User controller: handles user-related requests
+- Auth controller: handles authentication-related requests
+- User routes: defines user-related API endpoints
+- Auth routes: defines authentication-related API endpoints
+- App: main entry point of the application
+
+File structure:
+- src/
+  - controllers/
+    - userController.ts
+    - authController.ts
+  - models/
+    - user.ts
+    - auth.ts
+  - routes/
+    - userRoutes.ts
+    - authRoutes.ts
+  - app.ts
+- dist/
+- node_modules/
+- package.json
+- tsconfig.json
+
+user.ts
+```typescript
+import { Schema, model } from 'mongoose';
+
+interface User {
+  username: string;
+  password: string;
+}
+
+const userSchema = new Schema<User>({
+  username: { type: String, required: true },
+  password: { type: String, required: true },
+});
+
+const UserModel = model<User>('User', userSchema);
+
+export { User, UserModel };
+```
+
+auth.ts
+```typescript
+import { Schema, model } from 'mongoose';
+
+interface Auth {
+  user: string;
+  token: string;
+}
+
+const authSchema = new Schema<Auth>({
+  user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  token: { type: String, required: true },
+});
+
+const AuthModel = model<Auth>('Auth', authSchema);
+
+export { Auth, AuthModel };
+```
+
+userController.ts
+```typescript
+import { Request, Response } from 'express';
+import { UserModel } from '../models/user';
+
+class UserController {
+  async createUser(req: Request, res: Response) {
+    try {
+      const { username, password } = req.body;
+      const user = await UserModel.create({ username, password });
+      res.status(201).json(user);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  }
+
+  async getUser(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const user = await UserModel.findById(id);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      res.json(user);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  }
+
+  async updateUser(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { username, password } = req.body;
+      const user = await UserModel.findByIdAndUpdate(id, { username, password }, { new: true });
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      res.json(user);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  }
+
+  async deleteUser(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const user = await UserModel.findByIdAndDelete(id);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      res.json(user);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  }
+}
+
+export { UserController };
+```
+
+authController.ts
+```typescript
+import { Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
+import { AuthModel } from '../models/auth';
+import { UserModel } from '../models/user';
+
+class AuthController {
+  async login(req: Request, res: Response) {
+    try {
+      const { username, password } = req.body;
+      const user = await UserModel.findOne({ username, password });
+      if (!user) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+      const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET!);
+      await AuthModel.create({ user: user._id, token });
+      res.json({ token });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  }
+
+  async logout(req: Request, res: Response) {
+    try {
+      const { authorization } = req.headers;
+      const token = authorization?.split(' ')[1];
+      await AuthModel.findOneAndDelete({ token });
+      res.json({ message: 'Logout successful' });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  }
+}
+
+export { AuthController };
+```
+
+userRoutes.ts
+```typescript
+import { Router } from 'express';
+import { UserController } from '../controllers/userController';
+
+const router = Router();
+const userController = new UserController();
+
+router.post('/', userController.createUser);
+router.get('/:id', userController.getUser);
+router.patch('/:id', userController.updateUser);
+router.delete('/:id', userController.deleteUser);
+
+export { router as userRoutes };
+```
+
+authRoutes.ts
+```typescript
+import { Router } from 'express';
+import { AuthController } from '../controllers/authController';
+
+const router = Router();
+const authController = new AuthController();
+
+router.post('/login', authController.login);
+router.post('/logout', authController.logout);
+
+export { router as authRoutes };
+```
+
+app.ts
+```typescript
+import express from 'express';
+import mongoose from 'mongoose';
+import { userRoutes } from './routes/userRoutes';
+import { authRoutes } from './routes/authRoutes';
+
+class App {
+  public app: express.Application;
+  private readonly mongoUri: string;
+
+  constructor() {
+    this.app = express();
+    this.mongoUri = process.env.MONGO_URI!;
+    this.config();
+    this.routes();
+    this.connect();
+  }
+
+  private config() {
+    this.app.use(express.json());
+  }
+
+  private routes() {
+    this.app.use('/users', userRoutes);
+    this.app.use('/auth', authRoutes);
+  }
+
+  private async connect() {
+    try {
+      await mongoose.connect(this.mongoUri, { useNewUrlParser: true, useUnifiedTopology: true });
+      console.log('Connected to MongoDB');
+    } catch (error) {
+      console.error(error);
+      process.exit(1);
+    }
+  }
+}
+
+export { App };
+```
+
+package.json
+```json
+{
+  "name": "web-scraper-api",
+  "version": "1.0.0",
+  "description": "API for web scraping and saving clippings",
+  "main": "dist/app.js",
+  "scripts": {
+    "start": "node dist/app.js",
+    "dev": "nodemon src/app.ts",
+    "build": "tsc",
+    "test": "jest"
+  },
+  "keywords": [
+    "web scraping",
+    "API",
+    "MongoDB",
+    "JWT authentication",
+    "Readability.js"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^10.0.0",
+    "express": "^4.17.1",
+    "jsonwebtoken": "^8.5.1",
+    "mongoose": "^6.0.11",
+    "readability": "^0.7.1"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.13",
+    "@types/jest": "^27.0.1",
+    "@types/mongoose": "^5.11.97",
+    "@types/node": "^16.7.10",
+    "jest": "^27.0.6",
+    "nodemon": "^2.0.12",
+    "ts-jest": "^27.0.4",
+    "ts-node": "^10.2.1",
+    "typescript": "^4.4.2"
+  }
+}
+```
+
+tsconfig.json
+```json
+{
+  "compilerOptions": {
+    "target": "es6",
+    "module": "commonjs",
+    "outDir": "dist",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "**/*.spec.ts"]
+}
+```

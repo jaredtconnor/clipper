@@ -1,0 +1,39 @@
+{
+  "name": "web-scraper-api",
+  "version": "1.0.0",
+  "description": "API for web scraping and saving clippings",
+  "main": "dist/app.js",
+  "scripts": {
+    "start": "node dist/app.js",
+    "dev": "nodemon src/app.ts",
+    "build": "tsc",
+    "test": "jest"
+  },
+  "keywords": [
+    "web scraping",
+    "API",
+    "MongoDB",
+    "JWT authentication",
+    "Readability.js"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^10.0.0",
+    "express": "^4.17.1",
+    "jsonwebtoken": "^8.5.1",
+    "mongoose": "^6.0.11",
+    "readability": "^0.7.1"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.13",
+    "@types/jest": "^27.0.1",
+    "@types/mongoose": "^5.11.97",
+    "@types/node": "^16.7.10",
+    "jest": "^27.0.6",
+    "nodemon": "^2.0.12",
+    "ts-jest": "^27.0.4",
+    "ts-node": "^10.2.1",
+    "typescript": "^4.4.2"
+  }
+}
