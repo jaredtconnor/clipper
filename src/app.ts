@@ -1,7 +1,7 @@
-import express from 'express';
-import mongoose from 'mongoose';
-import { userRoutes } from './routes/userRoutes';
-import { authRoutes } from './routes/authRoutes';
+import express from "express";
+import mongoose from "mongoose";
+import { userRoutes } from "./routes/userRoutes";
+import { authRoutes } from "./routes/authRoutes";
 
 class App {
   public app: express.Application;
@@ -20,14 +20,17 @@ class App {
   }
 
   private routes() {
-    this.app.use('/users', userRoutes);
-    this.app.use('/auth', authRoutes);
+    this.app.use("/users", userRoutes);
+    this.app.use("/auth", authRoutes);
   }
 
   private async connect() {
     try {
-      await mongoose.connect(this.mongoUri, { useNewUrlParser: true, useUnifiedTopology: true });
-      console.log('Connected to MongoDB');
+      await mongoose.connect(this.mongoUri, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+      });
+      console.log("Connected to MongoDB");
     } catch (error) {
       console.error(error);
       process.exit(1);
